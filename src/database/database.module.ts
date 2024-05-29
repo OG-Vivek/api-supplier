@@ -12,5 +12,7 @@ import * as dotenv from 'dotenv';
       inject: [ConfigService],
     }),
   ],
+  providers: [],
+  exports: [MongooseModule],
 })
 export class DatabaseModule {}

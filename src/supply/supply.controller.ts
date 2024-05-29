@@ -4,7 +4,7 @@ import { DeleteGlobalRedirectURLs } from './DTOs/delete-Global-Redirect-URLs';
 import { SetRedirectUrls } from './DTOs/set-Global-Redirect-URLs.dto';
 
 @Controller('supply')
-@UsePipes(new ValidationPipe()) // Add this line
+@UsePipes(new ValidationPipe()) 
 export class SupplyController {
   constructor(private _supplyService: SupplyService) {}
 
