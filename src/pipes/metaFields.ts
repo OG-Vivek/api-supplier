@@ -9,9 +9,9 @@ export class MetadataFieldsValidationPipe implements PipeTransform {
     'surveyStatus',
     'deviceType',
     'groupType',
-    'dma mapping',
-    'jobType',
-    'questionType ',
+    'dmaMapping',
+    'projectType',
+    'questionType',
   ];
 
   transform(value: string, metadata: ArgumentMetadata) {

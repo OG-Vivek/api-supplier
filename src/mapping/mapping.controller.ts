@@ -1,6 +1,7 @@
-import { Controller, Get, Param, UsePipes } from '@nestjs/common';
+import { Controller, Get, Param, Res, UsePipes } from '@nestjs/common';
 import { MappingService } from './mapping.service';
 import { MetadataFieldsValidationPipe } from 'src/pipes/metaFields';
+import { Response } from 'express';
 
 @Controller('mapping')
 export class MappingController {
@@ -8,9 +9,15 @@ export class MappingController {
 
   @UsePipes(MetadataFieldsValidationPipe)
   @Get('metadata/:fields')
-  getMetadataFields(@Param('fields') fields: string[]) {
-    console.log(fields)
-    // return this._mappingService.getMetadataFields();
-    return this._mappingService.getMetadataFields(fields);
+  async getMetadataFields(@Param('fields') fields: string[] ,@Res() res :Response) {
+    try {
+      let result = await this._mappingService.getMetadataFields(fields);
+      if(!result)
+        return res.status(404).json({ apiStatus: 'Error', error: 'No data found' });
+      return res.status(200).json({ apiStatus: 'Success', result });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ apiStatus: 'Error', error: 'Something went wrong' });
+    }
   }
 }
