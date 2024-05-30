@@ -8,6 +8,7 @@ import { CommonModule } from './common/common.module';
 import { SupplyModule } from './supply/supply.module';
 import { MappingModule } from './mapping/mapping.module';
 import { ResourcesModule } from './resources/resources.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -18,6 +19,10 @@ import { ResourcesModule } from './resources/resources.module';
     MappingModule,
     ResourcesModule,
     ConfigModule.forRoot(), // Register the dynamic module
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_KEY,
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

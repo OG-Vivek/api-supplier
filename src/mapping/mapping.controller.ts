@@ -1,8 +1,10 @@
-import { Controller, Get, Param, Res, UsePipes } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards, UsePipes } from '@nestjs/common';
 import { MappingService } from './mapping.service';
 import { MetadataFieldsValidationPipe } from 'src/pipes/metaFields';
 import { Response } from 'express';
+import { verifySupplierGuard } from 'src/guards/verifySupplier.guard';
 
+// @UseGuards(verifySupplierGuard)
 @Controller('mapping')
 export class MappingController {
   constructor(private readonly _mappingService: MappingService) {}

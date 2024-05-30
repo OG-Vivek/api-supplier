@@ -1,13 +1,17 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
+import { CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { NextFunction, Response, Request } from 'express';
+import {Request } from 'express';
 import * as dotenv from 'dotenv';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Supplier } from 'src/model/supplier.model';
 dotenv.config();
 
-export class AuthenticationGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector, @Inject(JwtService) private readonly jwtService: JwtService,
+export class verifySupplierGuard implements CanActivate {
+  constructor(@Inject(JwtService) private readonly jwtService: JwtService,
+  @InjectModel('Supplier') private readonly userModel: Model<Supplier>,
   ) { }
 
   canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
@@ -15,18 +19,19 @@ export class AuthenticationGuard implements CanActivate {
     return this.validateRequest(request);
   }
 
-  private validateRequest(request: Request): any {
-    const authHeader = request.headers['authorization'];
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  async validateRequest(request: Request) {
+    const authHeader = request.headers['x-access-token'] as string;
+    if (!authHeader) {
       throw new UnauthorizedException('Invalid token format');
     }
-    const token = authHeader.split(' ')[1];
     try {
-      const decodedToken = this.jwtService.verify(token, { secret: process.env.JWT_KEY });
+      const decodedToken = this.jwtService.verify(authHeader, { secret: process.env.JWT_KEY });
       if(!decodedToken){
         throw new UnauthorizedException('Invalid token format');
       }
-      request.headers.userId = decodedToken.id;
+      let supplier = await this.userModel.findById(decodedToken.id);
+      if(!supplier)
+        return false;
       return true;
     } catch (error) {
       console.log("error", error)
