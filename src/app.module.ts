@@ -7,6 +7,7 @@ import { ConfigModules } from './config/config.module';
 import { CommonModule } from './common/common.module';
 import { SupplyModule } from './supply/supply.module';
 import { MappingModule } from './mapping/mapping.module';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ResourcesModule } from './resources/resources.module';
 import { JwtModule } from '@nestjs/jwt';
 

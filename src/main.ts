@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './interceptors/http-exception.filter';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+
 dotenv.config();
 
 async function bootstrap() {

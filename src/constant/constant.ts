@@ -29,3 +29,10 @@ export const deviceTypes = [
   'Desktop + Tablet',
   'All',
 ];
+
+export const qTypeMapping = {
+  0: "Single Punch",
+  1: "Multipunch",
+  2: "Open End",
+  3: "Numeric Open End"
+};
