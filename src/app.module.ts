@@ -10,16 +10,28 @@ import { MappingModule } from './mapping/mapping.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ResourcesModule } from './resources/resources.module';
 import { JwtModule } from '@nestjs/jwt';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
+import type { RedisClientOptions } from 'redis';
 
 @Module({
   imports: [
     DatabaseModule,
     ConfigModules,
+    CacheModule.register({
+      isGlobal: true,
+      store: redisStore,
+      host: '127.0.0.1',
+      port: 6379,
+      auth_pass: process.env.REDIS_AUTH_PASS,
+      ttl: 0, // 60 seconds TTL
+    }),
+    
     SupplyModule,
     CommonModule,
     MappingModule,
     ResourcesModule,
-    ConfigModule.forRoot(), // Register the dynamic module
+    ConfigModule.forRoot(), 
     JwtModule.register({
       global: true,
       secret: process.env.JWT_KEY,

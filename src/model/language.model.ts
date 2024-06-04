@@ -3,18 +3,18 @@ import { Document } from 'mongoose';
 import * as mongoose from 'mongoose';
 
 interface countryLanguage {
-    _id: string; // MongoDB ObjectId
+    _id: string; 
     Code: string;
-    Id: string; // Assuming it's a string representation of an ID
+    Id: string; 
     IsActive: boolean;
     Name: string;
     Lng: string;
     cntCode: string;
   }
   
-@Schema({ collection: 'country_languages' }) // Set the collection name explicitly
+@Schema({ collection: 'country_languages' }) 
 export class CountryLanguage extends Document implements countryLanguage{
-  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true }) // Use mongoose.Schema.Types.ObjectId for _id
+  @Prop({ type: mongoose.Schema.Types.ObjectId, required: true }) 
   _id: string;
 
   @Prop({ required: true })

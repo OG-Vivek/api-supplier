@@ -7,22 +7,22 @@ interface ValidRange {
 }
 
 interface Language {
-  _id: string; // Use string for ObjectIds
+  _id: string; 
   name: string;
   id: number;
-  primary?: number; // Optional field
+  primary?: number; 
 }
 
-// country.interface.ts
+
 interface country {
   _id: string;
   ShortCode: string;
   status: number;
-  states: any[]; // Adjust the type based on the structure of your states array
+  states: any[]; 
   ageMin: number;
   id: number;
   postalCodeTargetingEnabled: boolean;
-  regionTypes: any[]; // Adjust based on your regionTypes data
+  regionTypes: any[]; 
   validIncidenceRateRange: ValidRange;
   validLengthOfInterviewRange: ValidRange;
   language: Language[];

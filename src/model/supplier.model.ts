@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import * as mongoose from 'mongoose'; // Import mongoose
-// cmsn.interface.ts
+import * as mongoose from 'mongoose'; 
+
 interface Cmsn {
     fltRt: number;
     cpiTp: number;
@@ -11,7 +11,7 @@ interface Cmsn {
  
   @Schema()
   export class Supplier extends Document {
-    @Prop({ type: mongoose.Schema.Types.ObjectId, required: true }) // Assuming MongoDB ObjectId
+    @Prop({ type: mongoose.Schema.Types.ObjectId, required: true }) 
     _id: string;
   
     @Prop({ type: Object, required: true })
@@ -37,12 +37,12 @@ interface Cmsn {
   
     @Prop({ required: true })
     sUrl: string;
-    // ... (repeat @Prop for other URLs)
+    
   
     @Prop({ required: true })
     api_supp_chk: number;
   
-    // ... (repeat @Prop for other number fields)
+    
   
     @Prop({ type: Date, required: true })
     crtd_on: Date;
@@ -53,7 +53,7 @@ interface Cmsn {
     @Prop({ required: true })
     __v: number;
   
-    // ... (repeat @Prop for remaining string fields)
+    
   }
   
   export const SupplierSchema = SchemaFactory.createForClass(Supplier);
