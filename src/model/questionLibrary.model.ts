@@ -1,33 +1,6 @@
 import { Document } from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-// interface localization {
-//   id:  Number,
-//   qId: Number,
-//   qKey: String, 
-//   cnt: String,
-//   lang: String,
-//   qTextEng: String,
-//   qText: String,
-//   display : Number, //  0-customized , 1- Alpha, 2- Randomized
-//   st: Number,   // 0=Inactive, 1=Active, 2=Deleted
-//   isLocAct: Number,
-//   cat : Number[],
-//   isTarget : Number,  // 1=Demo/Geo, 0=OtherProfile Questions
-//   qOptions : [{
-//       id: Number,
-//       optTextEng: String,
-//       optText:  String,
-//       defaultOpt: String,
-//       selectOnlyOpt:  String,
-//       optScore: Number,
-//       optSeq: Number,
-//       islock: Boolean,
-//       st: Number    // 0=Inactive, 1=Active, 2=Deleted
-//   }]
-// }
-
-
 @Schema({ collection: 'localizations' })
 export class Localization extends Document{
   @Prop({ required: true })

@@ -15,7 +15,7 @@ interface globalUrl{
 @Schema({ collection: 'suppliers' })
 export class Url extends Document {
 
-  @Prop({ type: Number, required: true })
+  @Prop({ type: Number, required: false })
   id: number;
 
   @Prop({ type: String, required: false })
