@@ -32,6 +32,7 @@ export class verifySupplierGuard implements CanActivate {
       let supplier = await this.userModel.findById(decodedToken.id);
       if(!supplier)
         return false;
+      request.headers.supId = supplier.id
       return true;
     } catch (error) {
       console.log("error", error)

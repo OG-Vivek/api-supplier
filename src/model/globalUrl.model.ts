@@ -38,6 +38,7 @@ export class Url extends Document {
 
   @Prop({ type: String, required: false })
   pstbck_fail: string;
+    static Project: string;
 }
 
 export const UrlSchema = SchemaFactory.createForClass(Url);

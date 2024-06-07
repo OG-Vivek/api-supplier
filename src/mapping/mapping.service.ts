@@ -56,7 +56,6 @@ export class MappingService {
   @CacheKey('cached_cry_data_countries') 
   @CacheTTL(1)
   async getCountriesMetadataFields() {
-    console.log("ye aa rha hai kya ?")
     try {
       const countries = await this.countryModel
         .find()

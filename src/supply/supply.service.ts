@@ -9,12 +9,17 @@ import { qTypeMapping } from 'src/constant/constant';
 import { Url  } from 'src/model/globalUrl.model';
 import { CACHE_MANAGER, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { DataBaseService } from 'src/database/database.service';
+import { CollectionNames, Database, Operation } from 'src/utils/enums';
 
 @Injectable()
 export class SupplyService {
+  private readonly dbName: string = process.env.dbName
   constructor(@InjectModel('Localization') private readonly localizationModel: Model<Localization>,
     @InjectModel('Question') private readonly questionModel: Model<Question>,
-    @InjectModel('Url') private readonly globalUrlModel: Model<Url> ) { }
+    @InjectModel('Url') private readonly globalUrlModel: Model<Url>,
+    private readonly dbService: DataBaseService 
+  ) { }
 
   @CacheKey('cached_questions') 
   @CacheTTL(1)
@@ -120,6 +125,87 @@ export class SupplyService {
   async deleteGlobalRedirectURLs(data?: DeleteGlobalRedirectURLs) {
     try {
       return;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async getAllExchangeSup() {
+    try {
+      let data = {
+        dbName:Database.dbName,
+        collectionName:CollectionNames.Suppliers,
+        query: {
+          filter: { api_supp_chk: 1  },
+        }
+      }
+      let result = await this.dbService.findMany(data);
+      return { "apiStatus": "success",msg:'All live groups are successfully searched',result}
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }  
+  
+  async getAllocatedSurveys(supIdToFind:number) {
+    try {
+      let data = {
+        dbName: Database.dbName,
+        collectionName: 'project_stats',
+        query: {
+          filter: {
+            surveys: {
+              $elemMatch: {
+                st: { $in: [0] },
+                sup: { $in: [supIdToFind] }
+              }
+            }
+          },
+          projection: { 
+            "_id": 0,
+            "surveys.sur_nm": 1,
+            "surveys.sur_id": 1,
+            "surveys.st": 1,
+            "surveys.color": 1,
+            "surveys.N": 1,
+            "surveys.qt": 1,
+            "surveys.sup_cpi": 1,
+            "surveys.sur_rw": 1,
+            "surveys.sur_rev": 1,
+            "surveys.oq": 1,
+            "surveys.fls": 1,
+            "surveys.clks": 1,
+            "surveys.cmps": 1,
+            "surveys.shw_surv_dash": 1,
+            "surveys.cmp_alt": 1,
+            "surveys.availUrlCnt": 1,
+            "surveys.url_typ": 1,
+            "surveys.allw_dpl_clks": 1,
+            "surveys.cmp_id": 1,
+            "surveys.crtd_by": 1,
+            "surveys.crtd_on": 1,
+            "surveys.IR": 1,
+            "surveys.LOI": 1,
+            "surveys.from_quote": 1,
+            "surveys.is_feas_id": 1,
+            "surveys.cnt": 1,
+            "surveys.CPI": 1,
+            "surveys.act_rw": 1,
+            "surveys.trsld_LOI": 1,
+            "surveys.trsld_IR": 1,
+            "surveys.alert_msg": 1,
+            "surveys.mod_by": 1,
+            "surveys.mod_on": 1,
+            "surveys.mod_on_saved": 1,
+            "surveys.isLiveFromCron": 1,
+            "surveys.live_dt": 1,
+          }
+        }
+      }
+      let response :any = await this.dbService.findMany(data);
+      let result = await response.flatMap(entry => entry.surveys);
+      return { "apiStatus": "success",msg:'All live groups are successfully searched',result}
     } catch (error) {
       console.error(error);
       throw error;

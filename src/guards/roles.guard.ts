@@ -1,8 +1,7 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
+import { CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { NextFunction, Response, Request } from 'express';
+import {  Request } from 'express';
 import * as dotenv from 'dotenv';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -13,7 +12,6 @@ export class RolesGuard implements CanActivate {
   private readonly secret: string;
 
   constructor(
-    private readonly reflector: Reflector,
     @Inject(JwtService) private readonly jwtService: JwtService,
     @InjectModel('User') private readonly userModel: Model<User>,
   ) {

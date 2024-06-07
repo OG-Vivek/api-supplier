@@ -1,12 +1,12 @@
-import { Body, Controller, Res ,Delete, Get, Param, Put, UsePipes, ValidationPipe, Headers,  BadRequestException, HttpException, HttpStatus, InternalServerErrorException, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Res ,Delete, Get, Param, Put, UsePipes, ValidationPipe, Headers,  BadRequestException, HttpException, HttpStatus, InternalServerErrorException, UseInterceptors, Req } from '@nestjs/common';
 import { SupplyService } from './supply.service';
 import { DeleteGlobalRedirectURLs } from './DTOs/delete-Global-Redirect-URLs';
 import { SetRedirectUrls } from './DTOs/set-Global-Redirect-URLs.dto';
 import { GetQuestionsDto } from './DTOs/lookup-Question-Library.dto';
 import { CacheInterceptor } from '@nestjs/cache-manager';
-import { Response } from 'express';
+import { Response,Request } from 'express';
 
-@UseInterceptors(CacheInterceptor)
+// @UseInterceptors(CacheInterceptor)
 @Controller('supply')
 @UsePipes(new ValidationPipe()) 
 export class SupplyController {
@@ -64,11 +64,16 @@ export class SupplyController {
 
   }
 
-  @Delete('accountUrls')
-  async deleteGlobalRedirectURLs(
-    @Body() deleteAccountUrlsDto: DeleteGlobalRedirectURLs
-  ) {
-    return this._supplyService.deleteGlobalRedirectURLs(deleteAccountUrlsDto);
+  @Get('getAllocatedSurveys')
+  async getAllocatedSurveys(@Req() req:Request) {
+    try {
+      const supId = req.headers.user as string;
+      let supIdToFind :number = parseInt(supId);
+      supIdToFind = 111  //TODO : remove this when we have token
+      return await this._supplyService.getAllocatedSurveys(supIdToFind);
+    } catch (error) {
+      return new Error()
+    }
   }
 }
 
