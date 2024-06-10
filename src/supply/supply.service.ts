@@ -191,6 +191,7 @@ export class SupplyService {
     
       const surveyEncData:any = await this.dbService.findMany(encQuery);
       
+      let lngIdsToFind =[]
       // Create a lookup map for sur_num_enc and mem_chk by sur_id
       const surveyEncMap = new Map();
       surveyEncData.forEach(item => {
@@ -199,7 +200,27 @@ export class SupplyService {
           mem_chk: item.mem_chk,
           lngCode: item.trg.lng[0],
         });
+        lngIdsToFind.push(item.trg.lng[0]);
       })
+
+      //Find Language
+      const lngQuery: any = {
+        dbName: Database.dbName,
+        collectionName: 'languages',
+        query: {
+          filter: { id: { $in: lngIdsToFind } },
+          projection: { 
+            _id: 0,
+            name:1,
+            id:1
+          }
+        }
+      };
+      const LngDatas:any = await this.dbService.findMany(lngQuery)
+
+      // Create a lookup map for language and languageCode
+      const LngMapedData = new Map(LngDatas.map(item => [item.id, item.name]));
+
       // Add sur_num_enc to the result
       const resultWithEnc = result.map(survey =>{
         const encData = surveyEncMap.get(survey.sur_id);
@@ -210,12 +231,12 @@ export class SupplyService {
           CPI:survey.CPI,
           isRevShr:'',
           supCmps:'',
-          remainingN:'',
+          remainingN: survey.N - survey.cmps,
           LOI: survey.LOI,
           IR:survey.IR,
           Country:survey.cnt.cnt_nm,
           CountryCode:survey.cnt.cnt_code,
-          Language:'',
+          Language:LngMapedData.get(encData.lngCode),
           LanguageCode:'',
           groupType:'',
           deviceType:'',
@@ -224,7 +245,19 @@ export class SupplyService {
           reContact:encData.mem_chk ? true : false,
           liveUr: `http://ogmr-api.ongraph.com:4000/screener?survey=${encData.sur_num_enc}&supplierId=111&pid=`,
           testURL: `http://ogmr-api.ongraph.com:4000/screener?isTest=1&isLive=0&survey=${encData.sur_num_enc}&supplierId=111&pid=`,
-                  
+          isQuota:'',
+          projectCategory:'',
+          isPIIRequired:'',
+          projectId:'',
+          BuyerId: '', //
+          expected_end_date: '',  // is this project end date ?
+          duplicateSurveyIds: '', // ask dinesh sir 
+          duplicateCheckLevel: '', // ask dinesh sir
+          statuses: '', 
+          numberOfCompletes: '',
+          numberOfStarts: '',
+          globalBuyerConversion: '',
+          globalMedianLOI: '',
         };
       });
 
