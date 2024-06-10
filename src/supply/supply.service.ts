@@ -157,58 +157,86 @@ export class SupplyService {
           filter: {
             surveys: {
               $elemMatch: {
-                st: { $in: [0] },
+                st: { $in: [1] },
                 sup: { $in: [supIdToFind] }
               }
             }
           },
           projection: { 
-            "_id": 0,
-            "surveys.sur_nm": 1,
-            "surveys.sur_id": 1,
-            "surveys.st": 1,
-            "surveys.color": 1,
-            "surveys.N": 1,
-            "surveys.qt": 1,
-            "surveys.sup_cpi": 1,
-            "surveys.sur_rw": 1,
-            "surveys.sur_rev": 1,
-            "surveys.oq": 1,
-            "surveys.fls": 1,
-            "surveys.clks": 1,
-            "surveys.cmps": 1,
-            "surveys.shw_surv_dash": 1,
-            "surveys.cmp_alt": 1,
-            "surveys.availUrlCnt": 1,
-            "surveys.url_typ": 1,
-            "surveys.allw_dpl_clks": 1,
-            "surveys.cmp_id": 1,
-            "surveys.crtd_by": 1,
-            "surveys.crtd_on": 1,
-            "surveys.IR": 1,
-            "surveys.LOI": 1,
-            "surveys.from_quote": 1,
-            "surveys.is_feas_id": 1,
-            "surveys.cnt": 1,
-            "surveys.CPI": 1,
-            "surveys.act_rw": 1,
-            "surveys.trsld_LOI": 1,
-            "surveys.trsld_IR": 1,
-            "surveys.alert_msg": 1,
-            "surveys.mod_by": 1,
-            "surveys.mod_on": 1,
-            "surveys.mod_on_saved": 1,
-            "surveys.isLiveFromCron": 1,
-            "surveys.live_dt": 1,
           }
         }
       }
       let response :any = await this.dbService.findMany(data);
       let result = await response.flatMap(entry => entry.surveys);
-      return { "apiStatus": "success",msg:'All live groups are successfully searched',result}
+
+      let surveyIdsToFind =[]
+      await response.flatMap((entry => entry.surveys.map(survey => (
+        surveyIdsToFind.push(survey.sur_id))
+      )))
+
+      const encQuery: any = {
+        dbName: Database.dbName,
+        collectionName: 'surveys',
+        query: {
+          filter: { id: { $in: surveyIdsToFind } },
+          projection: { 
+            _id: 0,
+            sur_num_enc: 1,
+            id:1,
+            mem_chk:1,
+            trg:1,
+          }
+        }
+      };
+    
+      const surveyEncData:any = await this.dbService.findMany(encQuery);
+      
+      // Create a lookup map for sur_num_enc and mem_chk by sur_id
+      const surveyEncMap = new Map();
+      surveyEncData.forEach(item => {
+        surveyEncMap.set(item.id, {
+          sur_num_enc: item.sur_num_enc,
+          mem_chk: item.mem_chk,
+          lngCode: item.trg.lng[0],
+        });
+      })
+      // Add sur_num_enc to the result
+      const resultWithEnc = result.map(survey =>{
+        const encData = surveyEncMap.get(survey.sur_id);
+        return {
+          survayName: survey.sur_nm,
+          survayId: survey.id,
+          N:survey.N,
+          CPI:survey.CPI,
+          isRevShr:'',
+          supCmps:'',
+          remainingN:'',
+          LOI: survey.LOI,
+          IR:survey.IR,
+          Country:survey.cnt.cnt_nm,
+          CountryCode:survey.cnt.cnt_code,
+          Language:'',
+          LanguageCode:'',
+          groupType:'',
+          deviceType:'',
+          createdDate:survey.crtd_on,
+          modifiedDate:survey.mod_on,
+          reContact:encData.mem_chk ? true : false,
+          liveUr: `http://ogmr-api.ongraph.com:4000/screener?survey=${encData.sur_num_enc}&supplierId=111&pid=`,
+          testURL: `http://ogmr-api.ongraph.com:4000/screener?isTest=1&isLive=0&survey=${encData.sur_num_enc}&supplierId=111&pid=`,
+                  
+        };
+      });
+
+      return {
+        apiStatus: "success",
+        msg: 'All live groups are successfully searched',
+        result: resultWithEnc 
+      };
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
+  
 }
