@@ -1,83 +1,85 @@
 import { Inject, Injectable, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { DeleteGlobalRedirectURLs } from './DTOs/delete-Global-Redirect-URLs';
 import { SetRedirectUrls } from './DTOs/set-Global-Redirect-URLs.dto';
-import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import { Model, Connection } from 'mongoose';
-import { Supply } from 'src/model/supply.model';
-import { Localization, Question } from 'src/model/questionLibrary.model'
 import { qTypeMapping } from 'src/constant/constant';
-import { Url  } from 'src/model/globalUrl.model';
 import { CACHE_MANAGER, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { DataBaseService } from 'src/database/database.service';
 import { CollectionNames, Database, Operation } from 'src/utils/enums';
+import { query } from 'express';
 
 @Injectable()
 export class SupplyService {
   private readonly dbName: string = process.env.dbName
-  constructor(@InjectModel('Localization') private readonly localizationModel: Model<Localization>,
-    @InjectModel('Question') private readonly questionModel: Model<Question>,
-    @InjectModel('Url') private readonly globalUrlModel: Model<Url>,
+  constructor(
     private readonly dbService: DataBaseService 
   ) { }
 
-  @CacheKey('cached_questions') 
+  @CacheKey('cached_questions')
   @CacheTTL(1)
   async getQuestionsByCountryAndLanguage(countryKey: string, language: string): Promise<any> {
     try {
-      const localizationDocuments = await this.localizationModel.find().exec();
-      const questionDocuments = await this.questionModel.find().exec();
-
-      // Match documents in localization collection based on countryKey and language
-      const localizationPipeline = [
-        {
-          $match: {
+      const dataForLocalizations = {
+        dbName: Database.dbName,
+        collectionName: 'localizations',
+        query: {
+          filter: {
             cnt: countryKey,
             lang: language,
           },
+          projection: {
+            "_id": 0,
+            "qId": 1,
+            "qText": 1,
+          },
         },
-        {
-          $project: {
-            qId: 1
-          }
-        }
-      ];
+      };
 
-      const matchedLocalizationDocuments = await this.localizationModel.aggregate(localizationPipeline).exec();
+      const localizationDocuments: any = await this.dbService.findMany(dataForLocalizations);
+      console.log("Total match in localizatins", localizationDocuments.length);
 
-      if (matchedLocalizationDocuments.length === 0) {
+      if (!localizationDocuments.length) {
         throw new HttpException('No questions found for the given country and language', HttpStatus.NOT_FOUND);
       }
 
-      const qIds = matchedLocalizationDocuments.map(doc => doc.qId);
+      const qIds = localizationDocuments.map(doc => doc.qId);
 
-      const questionPipeline = [
-        {
-          $match: {
-            id: { $in: qIds }
-          }
-        }
-      ];
+      const dataForQuestions = {
+        dbName: Database.dbName,
+        collectionName: 'questions',
+        query: {
+          filter: {
+            id: { $in: qIds },
+          },
+        },
+      };
 
-      const matchedQuestionDocuments = await this.questionModel.aggregate(questionPipeline).exec();
+      const questionDocuments: any = await this.dbService.findMany(dataForQuestions);
+      console.log("Total match in questions", questionDocuments.length);
 
-      if (matchedQuestionDocuments.length === 0) {
+      if (!questionDocuments.length) {
         throw new HttpException('No questions found for the given country and language', HttpStatus.NOT_FOUND);
       }
 
-      const result = matchedQuestionDocuments.map(doc => ({
+      const questionTextMap = new Map();
+      localizationDocuments.forEach(doc => {
+        questionTextMap.set(doc.qId, doc.qText);
+      });
+
+      const result = questionDocuments.map(doc => ({
         questionId: doc.id,
-        questionText: doc.qText,
+        questionText: questionTextMap.get(doc.id),
         questionKey: doc.qKey,
         questionType: qTypeMapping[doc.qType] || "Unknown",
         language: language,
         questionCategory: doc.cat.map(category => category.name)
+
       }));
 
       return {
         apiStatus: "success",
-        msg: "questions are successfully searched",
-        result: result
+        msg: "Questions are successfully fetched",
+        result: result,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -91,7 +93,19 @@ export class SupplyService {
 
   async setRedirectUrls(data: SetRedirectUrls): Promise<any> {
     const { id, sUrl, fUrl, qTUrl, oUrl, tUrl, pstbck, pstbck_fail } = data;
-    const user = await this.globalUrlModel.findOne({ id: id });
+
+    const supplierData = {
+      dbName: Database.dbName,
+      collectionName: 'suppliers',
+      query: {
+        filter: {
+          id: id,
+        }
+      },
+    };
+
+    const user: any = await this.dbService.findMany(supplierData);
+
     const urlMappings = [
       { key: 'sUrl', value: sUrl },
       { key: 'fUrl', value: fUrl },
@@ -103,31 +117,35 @@ export class SupplyService {
     ];
 
     if (!user) {
-      throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+      throw new HttpException("Supplier not found", HttpStatus.NOT_FOUND);
     }
 
-    console.log("User", user);
+    const supplier = user[0];
+    console.log("User", supplier);
 
     urlMappings.forEach(mapping => {
       if (mapping.value) {
-        user[mapping.key] = mapping.value;
+        supplier[mapping.key] = mapping.value;
       }
     });
 
-    await user.save();
+    const updateData = {
+      dbName: Database.dbName,
+      collectionName: 'suppliers',
+      operation: Operation.Update,
+      query: {
+        filter: {
+          id: id,
+        }
+      },
+      fieldValues: [supplier]
+    };
+
+    const updateResponse = await this.dbService.updateMany(updateData);
 
     return {
       "apiStatus": "success",
       "msg": "Redirection Methods updated successfully"
-    }
-  }
-
-  async deleteGlobalRedirectURLs(data?: DeleteGlobalRedirectURLs) {
-    try {
-      return;
-    } catch (error) {
-      console.error(error);
-      throw error;
     }
   }
 
@@ -271,5 +289,165 @@ export class SupplyService {
       throw error;
     }
   }
+
+
+  async getAnswersByQuestionKey(questionKey: string, country: string, language: string) {
+    try {
+      const dataForLocalizations = {
+        dbName: Database.dbName,
+        collectionName: 'localizations',
+        query: {
+          filter: {
+            qKey: questionKey,
+            cnt: country,
+            lang: language,
+          },
+          projection: {
+            "_id": 0,
+            "qId": 1,
+            "qText": 1,
+            "qOptions": 1,
+          },
+        },
+      };
+
+      const localizationDocuments: any = await this.dbService.findMany(dataForLocalizations);
+      console.log("Total match in localizations ", localizationDocuments.length);
+
+      if (!localizationDocuments.length) {
+        throw new HttpException('No answers found', HttpStatus.NOT_FOUND);
+      }
+
+      const qIds = localizationDocuments.map(doc => doc.qId);
+
+      const dataForQuestions = {
+        dbName: Database.dbName,
+        collectionName: 'questions',
+        query: {
+          filter: {
+            id: { $in: qIds },
+          },
+        },
+      };
+
+      const questionDocuments: any = await this.dbService.findMany(dataForQuestions);
+      console.log("Total match in questions ", questionDocuments.length);
+
+      if (!questionDocuments.length) {
+        throw new HttpException('No answers found', HttpStatus.NOT_FOUND);
+      }
+
+      const questionTextMap = new Map();
+      const questionOptionsMap = new Map();
+      localizationDocuments.forEach(doc => {
+        questionTextMap.set(doc.qId, doc.qText);
+        questionOptionsMap.set(doc.qId, doc.qOptions.map(opt => ({
+          OptionText: opt.optText,
+          id: opt.id,
+          Order: opt.optSeq,
+        })));
+      });
+
+      const result = questionDocuments.map(doc => ({
+        questionKey: doc.qKey,
+        questionId: doc.id,
+        questionText: questionTextMap.get(doc.id),
+        questionType: qTypeMapping[doc.qType] || "Unknown",
+        questionCategory: doc.cat.map(category => category.name),
+        questionOptions: questionOptionsMap.get(doc.id) || [],
+      }));
+
+      return {
+        apiStatus: "success",
+        msg: "Answers are successfully fetched",
+        result: result,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException('An error occurred while fetching options', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+  }
+
+
+  async setRedirectionForSurvey(Data: SetRedirectUrls, surveyId: number) {
+    try {
+      const { id, sUrl, fUrl, qTUrl, oUrl, tUrl, pstbck, pstbck_fail } = Data;
+      const supplierId = id;
+      const supplierField = `sup${supplierId}`;
+
+      const urlMappings = [
+        { key: 'sUrl', value: sUrl },
+        { key: 'fUrl', value: fUrl },
+        { key: 'qTUrl', value: qTUrl },
+        { key: 'oUrl', value: oUrl },
+        { key: 'tUrl', value: tUrl },
+        { key: 'pstbck', value: pstbck },
+        { key: 'pstbck_fail', value: pstbck_fail },
+      ];
+
+      const data = {
+        dbName: Database.dbName,
+        collectionName: 'project_stats',
+        query: {
+          filter: {
+            'surveys': {
+              '$elemMatch': {
+                'sur_id': surveyId,
+                'sup': supplierId
+              }
+            }
+          },
+          projection: {
+            "_id": 0,
+            "surveys.$": 1
+          }
+        }
+      };
+
+      const response: any = await this.dbService.findMany(data);
+
+      if (!response.length || !response[0].surveys.length) {
+        throw new HttpException('No matching supplier field found', HttpStatus.NOT_FOUND);
+      }
+
+      const surveyToUpdate = response[0].surveys[0];
+
+      if (!surveyToUpdate[supplierField]) {
+        throw new HttpException('No matching supplier field found', HttpStatus.NOT_FOUND);
+      }
+
+      const result = surveyToUpdate[supplierField];
+
+      urlMappings.forEach(mapping => {
+        if (mapping.value) {
+          result[mapping.key] = mapping.value;
+        }
+      });
+
+      const updateData = {
+        dbName: Database.dbName,
+        collectionName: 'project_stats',
+        operation: Operation.Update,
+        query: {
+          'surveys.sur_id': surveyId,
+          'surveys.sup': supplierId
+        },
+        fieldValues: [{
+          [`surveys.$.${supplierField}`]: result
+        }]
+      };
+
+      const updateResponse = await this.dbService.updateMany(updateData);
+
+      return { apiStatus: "success", msg: 'Redirection URLs updated successfully' };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   
 }

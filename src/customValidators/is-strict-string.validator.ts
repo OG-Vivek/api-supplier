@@ -8,7 +8,7 @@ class IsStrictStringConstraint implements ValidatorConstraintInterface {
   }
 
   defaultMessage(args: ValidationArguments) {
-    return 'Value ($value) must be a valid string and not a number';
+    return "Invalid type";
   }
 }
 

@@ -3,10 +3,10 @@ import { IsStrictString } from 'src/customValidators/is-strict-string.validator'
  
 export class GetQuestionsDto {
     @IsNotEmpty()
-    @IsStrictString({ message: 'countryKey must be a string and not a number' })
+    @IsStrictString({ message: 'countryKey must be a string' })
     readonly countryKey: string;
   
     @IsNotEmpty()
-    @IsStrictString({ message: 'language must be a string and not a number' })
+    @IsStrictString({ message: 'language must be a string' })
     readonly language: string;
   }

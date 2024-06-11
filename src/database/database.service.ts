@@ -55,6 +55,7 @@ export class DataBaseService {
                 result = await this.mongoRepository.updateMany(dbName, collectionName, entityLog.query, {$set : resolvedData});
                 await this.addEntityLog(dbName, CollectionNames.Audit, entityLog);
             }
+            return result;
             return { message: `Entities updated from ${dbName} in collection ${collectionName}` };
         }
         catch (err) {
