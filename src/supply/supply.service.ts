@@ -1,11 +1,11 @@
-import { Inject, Injectable, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, HttpException, HttpStatus, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DeleteGlobalRedirectURLs } from './DTOs/delete-Global-Redirect-URLs';
 import { SetRedirectUrls } from './DTOs/set-Global-Redirect-URLs.dto';
-import { qTypeMapping } from 'src/constant/constant';
+import { deviceTypes, qTypeMapping } from 'src/constant/constant';
 import { CACHE_MANAGER, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { DataBaseService } from 'src/database/database.service';
-import { CollectionNames, Database, Operation } from 'src/utils/enums';
+import { CategoryTypes, CollectionNames, Database, DeviceTypes, Operation } from 'src/utils/enums';
 import { query } from 'express';
 
 @Injectable()
@@ -165,12 +165,30 @@ export class SupplyService {
       throw error;
     }
   }  
+
+  
+  async getSupplier(supId){         //Get the details of of supplier 
+    try {
+      let query = {
+        dbName:Database.dbName,
+        collectionName:CollectionNames.Suppliers,
+        query: {
+          filter: { id: supId },
+        }
+      }
+      let result = await this.dbService.findMany(query);
+      return { "apiStatus": "success",msg:'Supplier Got Successfully',result}
+    } catch (error) {
+      console.error(error);
+      throw NotFoundException;
+    }
+  }
   
   async getAllocatedSurveys(supIdToFind:number) {
     try {
-      let data = {
+      let prjStatsQuery = {
         dbName: Database.dbName,
-        collectionName: 'project_stats',
+        collectionName: CollectionNames.ProjectStats,
         query: {
           filter: {
             surveys: {
@@ -184,17 +202,55 @@ export class SupplyService {
           }
         }
       }
-      let response :any = await this.dbService.findMany(data);
-      let result = await response.flatMap(entry => entry.surveys);
+      let response :any = await this.dbService.findMany(prjStatsQuery);
 
+      let projectIds = [];
+      let result = response.flatMap(entry => {
+        const filteredSurveys = entry.surveys.filter(survey => 
+          Array.isArray(survey.sup) && survey.sup.includes(supIdToFind)
+        );
+  
+        // Add the project ID to the array if there are matching surveys
+        if (filteredSurveys.length > 0) {
+          projectIds.push(entry.id);
+        }
+        return filteredSurveys.map(survey => ({
+          ...survey,
+          projectId: entry.id
+        }));
+      });
+
+
+      //Get project data from project collection
+      const ProjectQuery: any = {
+        dbName: Database.dbName,
+        collectionName: CollectionNames.Projects,
+        query: {
+          filter: { id: { $in: projectIds } },
+          projection: { 
+            _id: 0,
+            ct:1,
+            id:1
+          }
+        }
+      };
+    
+      const projectDatas:any = await this.dbService.findMany(ProjectQuery);
+      const projectDataMap = new Map(projectDatas.map(project => [project.id, project]));
+
+      //Get supplier details
+      let supplier = await this.getSupplier(supIdToFind)
+      
+      //Get the array of survey ids to find corresponding surveys
       let surveyIdsToFind =[]
       await response.flatMap((entry => entry.surveys.map(survey => (
         surveyIdsToFind.push(survey.sur_id))
       )))
 
-      const encQuery: any = {
+      //Query to find all surveys
+      const surQuery: any = {
         dbName: Database.dbName,
-        collectionName: 'surveys',
+        collectionName: CollectionNames.Surveys,
         query: {
           filter: { id: { $in: surveyIdsToFind } },
           projection: { 
@@ -203,28 +259,30 @@ export class SupplyService {
             id:1,
             mem_chk:1,
             trg:1,
+            dvc:1
           }
         }
       };
     
-      const surveyEncData:any = await this.dbService.findMany(encQuery);
+      const surveyData:any = await this.dbService.findMany(surQuery);
       
       let lngIdsToFind =[]
-      // Create a lookup map for sur_num_enc and mem_chk by sur_id
-      const surveyEncMap = new Map();
-      surveyEncData.forEach(item => {
-        surveyEncMap.set(item.id, {
+      // Create a lookup map for surveys details (sur_num_enc and mem_chk) by id
+      const surveyMap = new Map();
+      surveyData.forEach(item => {
+        surveyMap.set(item.id, {
           sur_num_enc: item.sur_num_enc,
           mem_chk: item.mem_chk,
           lngCode: item.trg.lng[0],
+          deviceType: item.dvc
         });
-        lngIdsToFind.push(item.trg.lng[0]);
+        lngIdsToFind.push(item.trg.lng[0]); // Get the language code to find the language
       })
 
-      //Find Language
+      //Find Language from Language collection
       const lngQuery: any = {
         dbName: Database.dbName,
-        collectionName: 'languages',
+        collectionName: CollectionNames.Languages,
         query: {
           filter: { id: { $in: lngIdsToFind } },
           projection: { 
@@ -241,37 +299,31 @@ export class SupplyService {
 
       // Add sur_num_enc to the result
       const resultWithEnc = result.map(survey =>{
-        const encData = surveyEncMap.get(survey.sur_id);
+        const surData = surveyMap.get(survey.sur_id);
+        const project:any = projectDataMap.get(survey.projectId);
         return {
+          survayId: survey.sur_id,
           survayName: survey.sur_nm,
-          survayId: survey.id,
-          N:survey.N,
-          CPI:survey.CPI,
-          isRevShr:'',
-          supCmps:'',
-          remainingN: survey.N - survey.cmps,
+          N:survey["sup"+supIdToFind].N,
+          CPI:survey["sup"+supIdToFind].CPI,
+          isRevShr:survey["sup"+supIdToFind].isRevShr ? true : false,
+          supCmps:survey["sup"+supIdToFind].isRevShr ? supplier.result[0].cmsn.revShr: 0,
+          remainingN: survey["sup"+supIdToFind].N - survey["sup"+supIdToFind].cmps,
           LOI: survey.LOI,
           IR:survey.IR,
           Country:survey.cnt.cnt_nm,
-          CountryCode:survey.cnt.cnt_code,
-          Language:LngMapedData.get(encData.lngCode),
-          LanguageCode:'',
-          groupType:'',
-          deviceType:'',
+          Language:LngMapedData.get(surData.lngCode),
+          reContact:surData.mem_chk ? true : false,
+          liveUr: `http://ogmr-api.ongraph.com:4000/screener?survey=${surData.sur_num_enc}&supplierId=111&pid=`,
+          testURL: `http://ogmr-api.ongraph.com:4000/screener?isTest=1&isLive=0&survey=${surData.sur_num_enc}&supplierId=111&pid=`,
+          projectId:survey.projectId,
+          deviceType:DeviceTypes[surData.deviceType],
+          projectCategory: CategoryTypes[project.ct],
           createdDate:survey.crtd_on,
           modifiedDate:survey.mod_on,
-          reContact:encData.mem_chk ? true : false,
-          liveUr: `http://ogmr-api.ongraph.com:4000/screener?survey=${encData.sur_num_enc}&supplierId=111&pid=`,
-          testURL: `http://ogmr-api.ongraph.com:4000/screener?isTest=1&isLive=0&survey=${encData.sur_num_enc}&supplierId=111&pid=`,
+          SupplierId: supIdToFind,
           isQuota:'',
-          projectCategory:'',
           isPIIRequired:'',
-          projectId:'',
-          BuyerId: '', //
-          expected_end_date: '',  // is this project end date ?
-          duplicateSurveyIds: '', // ask dinesh sir 
-          duplicateCheckLevel: '', // ask dinesh sir
-          statuses: '', 
           numberOfCompletes: '',
           numberOfStarts: '',
           globalBuyerConversion: '',
