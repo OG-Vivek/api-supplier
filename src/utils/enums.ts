@@ -4,7 +4,8 @@ export enum CollectionNames {
   Audit = 'audit',
   Surveys= 'surveys',
   ProjectStats = 'project_stats',
-  Languages = 'languages'
+  Languages = 'languages',
+  Quotas = 'quotas'
 }
 
 export enum Database {
@@ -32,7 +33,7 @@ export function getDeviceNameByCode(code: DeviceTypes): string {
   return DeviceTypes[code];
 }
 
-export enum CategoryTypes {
+export enum ProjectCategory {
   'Ailment' = 1,
   'Automotive' = 2,
   'Beauty/Cosmetics' = 3,
@@ -82,6 +83,6 @@ export enum CategoryTypes {
   'Websites/Internet/E-Commerce' = 47,
 }
 
-function getCategoryNameByCode(code: CategoryTypes): string {
-  return CategoryTypes[code];
+function getCategoryNameByCode(code: ProjectCategory): string {
+  return ProjectCategory[code];
 }

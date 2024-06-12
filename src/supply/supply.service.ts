@@ -5,7 +5,7 @@ import { deviceTypes, qTypeMapping } from 'src/constant/constant';
 import { CACHE_MANAGER, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { DataBaseService } from 'src/database/database.service';
-import { CategoryTypes, CollectionNames, Database, DeviceTypes, Operation } from 'src/utils/enums';
+import { ProjectCategory, CollectionNames, Database, DeviceTypes, Operation } from 'src/utils/enums';
 import { query } from 'express';
 
 @Injectable()
@@ -183,6 +183,7 @@ export class SupplyService {
   }
   
   async getAllocatedSurveys(supIdToFind:number) {
+    supIdToFind = 116
     try {
       let prjStatsQuery = {
         dbName: Database.dbName,
@@ -257,7 +258,8 @@ export class SupplyService {
             id:1,
             mem_chk:1,
             trg:1,
-            dvc:1
+            dvc:1,
+            pii:1
           }
         }
       };
@@ -272,7 +274,8 @@ export class SupplyService {
           sur_num_enc: item.sur_num_enc,
           mem_chk: item.mem_chk,
           lngCode: item.trg.lng[0],
-          deviceType: item.dvc
+          deviceType: item.dvc,
+          pii:item.pii
         });
         lngIdsToFind.push(item.trg.lng[0]); // Get the language code to find the language
       })
@@ -294,6 +297,23 @@ export class SupplyService {
 
       // Create a lookup map for language and languageCode
       const LngMapedData = new Map(LngDatas.map(item => [item.id, item.name]));
+            
+      //Find Quota data of surveys
+      const qtQuery: any = {
+        dbName: Database.dbName,
+        collectionName: CollectionNames.Quotas,
+        query: {
+          filter: { sur_id: { $in: surveyIdsToFind } },
+          projection: { 
+            _id: 0,
+            name:1,
+            sur_id:1
+          }
+        }
+      };
+      const QuataData:any = await this.dbService.findMany(qtQuery)
+      // Create a lookup map for isQuata and sur_id
+      const QutaMapedData = new Map(QuataData.map(item => [item.sur_id, true]));
 
       // Add sur_num_enc to the result
       const resultWithEnc = result.map(survey =>{
@@ -305,25 +325,26 @@ export class SupplyService {
           N:survey["sup"+supIdToFind].N,
           CPI:survey["sup"+supIdToFind].CPI,
           isRevShr:survey["sup"+supIdToFind].isRevShr ? true : false,
-          supCmps:survey["sup"+supIdToFind].isRevShr ? supplier.result[0].cmsn.revShr: 0,
+          // supCmps:survey["sup"+supIdToFind].isRevShr ? supplier.result[0].cmsn.revShr: 0,
+          supCmps:survey["sup"+supIdToFind].cost ? survey["sup"+supIdToFind].cost : 0,
           remainingN: survey["sup"+supIdToFind].N - survey["sup"+supIdToFind].cmps,
           LOI: survey.LOI,
           IR:survey.IR,
           Country:survey.cnt.cnt_nm,
           Language:LngMapedData.get(surData.lngCode),
           reContact:surData.mem_chk ? true : false,
-          liveUr: `http://ogmr-api.ongraph.com:4000/screener?survey=${surData.sur_num_enc}&supplierId=111&pid=`,
-          testURL: `http://ogmr-api.ongraph.com:4000/screener?isTest=1&isLive=0&survey=${surData.sur_num_enc}&supplierId=111&pid=`,
+          liveURL: `http://ogmr-api.ongraph.com:4000/screener?survey=${surData.sur_num_enc}&supplierId=${supIdToFind}&pid=`,
+          testURL: `http://ogmr-api.ongraph.com:4000/screener?isTest=1&isLive=0&survey=${surData.sur_num_enc}&supplierId=${supIdToFind}&pid=`,
           projectId:survey.projectId,
           deviceType:DeviceTypes[surData.deviceType],
-          projectCategory: CategoryTypes[project.ct],
+          projectCategory: ProjectCategory[project.ct],
           createdDate:survey.crtd_on,
           modifiedDate:survey.mod_on,
           SupplierId: supIdToFind,
-          isQuota:'',
-          isPIIRequired:'',
-          numberOfCompletes: '',
-          numberOfStarts: '',
+          isQuota: QutaMapedData.get(survey.sur_id) ? true : false,
+          isPIIRequired: surData.pii ? true : false,
+          numberOfCompletes: survey["sup"+supIdToFind].cmps ,
+          numberOfStarts: survey["sup"+supIdToFind].surStart ? survey["sup"+supIdToFind].surStart : 0,
           globalBuyerConversion: '',
           globalMedianLOI: '',
         };
