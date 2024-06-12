@@ -93,19 +93,20 @@ export class SupplyService {
 
   async setRedirectUrls(data: SetRedirectUrls): Promise<any> {
     const { id, sUrl, fUrl, qTUrl, oUrl, tUrl, pstbck, pstbck_fail } = data;
-
     const supplierData = {
       dbName: Database.dbName,
       collectionName: 'suppliers',
       query: {
         filter: {
           id: id,
+        },
+        projection: { 
+          _id:0,
         }
       },
     };
 
     const user: any = await this.dbService.findMany(supplierData);
-
     const urlMappings = [
       { key: 'sUrl', value: sUrl },
       { key: 'fUrl', value: fUrl },
@@ -121,7 +122,6 @@ export class SupplyService {
     }
 
     const supplier = user[0];
-    console.log("User", supplier);
 
     urlMappings.forEach(mapping => {
       if (mapping.value) {
@@ -133,10 +133,8 @@ export class SupplyService {
       dbName: Database.dbName,
       collectionName: 'suppliers',
       operation: Operation.Update,
-      query: {
-        filter: {
+      query: { 
           id: id,
-        }
       },
       fieldValues: [supplier]
     };

@@ -33,20 +33,34 @@ export class DataBaseService {
         }
     }
 
-    private resolveData(fieldValues: any[]) {
+    // private resolveData(fieldValues: any[]) {
+    //     console.log("fieldValuesfieldValuesfieldValues",fieldValues);
+    //     let data: any = {};
+    //     for (let item of fieldValues) {
+    //         let keys = Object.keys(item);
+    //         data[keys[0]] = item[keys[0]];
+    //     }
+    //     return data;
+    // }
+    private resolveData(fieldValues: any[]): { $set: any } {
         let data: any = {};
-        for (let item of fieldValues) {
-            let keys = Object.keys(item);
-            data[keys[0]] = item[keys[0]];
+        for (const item of fieldValues) {
+            if (typeof item === "object" && !Array.isArray(item)) {
+                Object.assign(data, item);
+            } else {
+                throw new Error("Invalid data type");
+            }
         }
-        return data;
-    }
+        return { $set: data };
+      }
+    
 
     public async updateMany(entityLog: EntityLogModel) {
         try {
             let result:any = [];
             let dbName: string = entityLog.dbName;
             let collectionName: string = entityLog.collectionName;
+            let dd = entityLog.fieldValues
             let resolvedData = this.resolveData(entityLog.fieldValues);
             if(Object.keys(resolvedData)[0].startsWith("$")){
                 await this.mongoRepository.updateMany(dbName, collectionName, entityLog.query, resolvedData);
