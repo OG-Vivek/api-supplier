@@ -6,12 +6,10 @@ import {Request } from 'express';
 import * as dotenv from 'dotenv';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Supplier } from 'src/model/supplier.model';
 dotenv.config();
 
 export class verifySupplierGuard implements CanActivate {
   constructor(@Inject(JwtService) private readonly jwtService: JwtService,
-  @InjectModel('Supplier') private readonly userModel: Model<Supplier>,
   ) { }
 
   canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
@@ -29,10 +27,10 @@ export class verifySupplierGuard implements CanActivate {
       if(!decodedToken){
         throw new UnauthorizedException('Invalid token format');
       }
-      let supplier = await this.userModel.findById(decodedToken.id);
-      if(!supplier)
-        return false;
-      request.headers.supId = supplier.id
+      // let supplier = await this.userModel.findById(decodedToken.id);
+      // if(!supplier)
+      //   return false;
+      // request.headers.supId = supplier.id
       return true;
     } catch (error) {
       console.log("error", error)

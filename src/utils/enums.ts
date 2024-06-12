@@ -6,7 +6,9 @@ export enum CollectionNames {
   ProjectStats = 'project_stats',
   Languages = 'languages',
   Quotas = 'quotas',
-  Qualification= 'qualification'
+  Qualification= 'qualification',
+  Countries = 'countries',
+  CountryLanguages = 'country_languages'
 }
 
 export enum Database {

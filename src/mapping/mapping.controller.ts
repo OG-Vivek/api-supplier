@@ -5,11 +5,11 @@ import { verifySupplierGuard } from 'src/guards/verifySupplier.guard';
 import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 
 // @UseGuards(verifySupplierGuard)
-@UseInterceptors(CacheInterceptor)
 @Controller('mapping')
 export class MappingController {
   constructor(private readonly _mappingService: MappingService) {}
-
+  
+  @UseInterceptors(CacheInterceptor)
   @UsePipes(MetadataFieldsValidationPipe)
   @Get('metadata/:fields')
   async getMetadataFields(@Param('fields') fields: string[] ) {
