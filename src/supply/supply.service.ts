@@ -15,41 +15,38 @@ export class SupplyService {
     private readonly dbService: DataBaseService 
   ) { }
 
-  @CacheKey('cached_questions')
-  @CacheTTL(1)
   async getQuestionsByCountryAndLanguage(countryKey: string, language: string): Promise<any> {
     try {
-      const dataForLocalizations = {
+      const languageData = {
         dbName: Database.dbName,
-        collectionName: 'localizations',
+        collectionName: 'languages',
         query: {
           filter: {
-            cnt: countryKey,
-            lang: language,
+            name: language,
           },
           projection: {
             "_id": 0,
-            "qId": 1,
-            "qText": 1,
+            "id": 1,
           },
         },
       };
+      const langData: any = await this.dbService.findMany(languageData);
+      console.log(langData);
 
-      const localizationDocuments: any = await this.dbService.findMany(dataForLocalizations);
-      console.log("Total match in localizatins", localizationDocuments.length);
-
-      if (!localizationDocuments.length) {
-        throw new HttpException('No questions found for the given country and language', HttpStatus.NOT_FOUND);
+      if (!langData || !langData.length) {
+        throw new HttpException('Invalid language', HttpStatus.NOT_FOUND);
       }
 
-      const qIds = localizationDocuments.map(doc => doc.qId);
+      const langCode = langData[0].id.toString();
+      console.log("Language code", langCode);
 
       const dataForQuestions = {
         dbName: Database.dbName,
-        collectionName: 'questions',
+        collectionName: 'qualification',
         query: {
           filter: {
-            id: { $in: qIds },
+            cnt: countryKey,
+            lang: langCode
           },
         },
       };
@@ -61,14 +58,9 @@ export class SupplyService {
         throw new HttpException('No questions found for the given country and language', HttpStatus.NOT_FOUND);
       }
 
-      const questionTextMap = new Map();
-      localizationDocuments.forEach(doc => {
-        questionTextMap.set(doc.qId, doc.qText);
-      });
-
       const result = questionDocuments.map(doc => ({
         questionId: doc.id,
-        questionText: questionTextMap.get(doc.id),
+        questionText: doc.qText,
         questionKey: doc.qKey,
         questionType: qTypeMapping[doc.qType] || "Unknown",
         language: language,
@@ -364,40 +356,39 @@ export class SupplyService {
 
   async getAnswersByQuestionKey(questionKey: string, country: string, language: string) {
     try {
-      const dataForLocalizations = {
+      const languageData = {
         dbName: Database.dbName,
-        collectionName: 'localizations',
+        collectionName: 'languages',
         query: {
           filter: {
-            qKey: questionKey,
-            cnt: country,
-            lang: language,
+            name: language,
           },
           projection: {
             "_id": 0,
-            "qId": 1,
-            "qText": 1,
-            "qOptions": 1,
+            "id": 1
           },
         },
       };
 
-      const localizationDocuments: any = await this.dbService.findMany(dataForLocalizations);
-      console.log("Total match in localizations ", localizationDocuments.length);
+      const langData: any = await this.dbService.findMany(languageData);
+      console.log(langData);
 
-      if (!localizationDocuments.length) {
-        throw new HttpException('No answers found', HttpStatus.NOT_FOUND);
+      if (!langData || !langData.length) {
+        throw new HttpException('Invalid language', HttpStatus.NOT_FOUND);
       }
 
-      const qIds = localizationDocuments.map(doc => doc.qId);
+      const langCode = langData[0].id.toString();
+      console.log("Language code", langCode);
 
       const dataForQuestions = {
         dbName: Database.dbName,
-        collectionName: 'questions',
+        collectionName: 'qualification',
         query: {
           filter: {
-            id: { $in: qIds },
-          },
+            lang: langCode,
+            cnt: country,
+            qKey: questionKey
+          }
         },
       };
 
@@ -408,24 +399,17 @@ export class SupplyService {
         throw new HttpException('No answers found', HttpStatus.NOT_FOUND);
       }
 
-      const questionTextMap = new Map();
-      const questionOptionsMap = new Map();
-      localizationDocuments.forEach(doc => {
-        questionTextMap.set(doc.qId, doc.qText);
-        questionOptionsMap.set(doc.qId, doc.qOptions.map(opt => ({
-          OptionText: opt.optText,
-          id: opt.id,
-          Order: opt.optSeq,
-        })));
-      });
-
       const result = questionDocuments.map(doc => ({
         questionKey: doc.qKey,
         questionId: doc.id,
-        questionText: questionTextMap.get(doc.id),
+        questionText: doc.qText,
         questionType: qTypeMapping[doc.qType] || "Unknown",
         questionCategory: doc.cat.map(category => category.name),
-        questionOptions: questionOptionsMap.get(doc.id) || [],
+        questionOptions: doc.qOptions.map(opt => ({
+          OptionText: opt.optText,
+          id: opt.id,
+          Order: opt.optSeq
+        })),
       }));
 
       return {
