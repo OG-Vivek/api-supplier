@@ -24,7 +24,7 @@ import type { RedisClientOptions } from 'redis';
       host: '127.0.0.1',
       port: 6379,
       auth_pass: process.env.REDIS_AUTH_PASS,
-      ttl: 0, // 60 seconds TTL
+      ttl: 10 * 60 * 1000 , // 10 mints
     }),
     
     SupplyModule,

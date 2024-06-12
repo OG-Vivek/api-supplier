@@ -49,7 +49,7 @@ export class SupplyController {
       throw new InternalServerErrorException('Could not set redirect URLs');
     }
   }
-
+  @UseInterceptors(CacheInterceptor)
   @Get('getAllocatedSurveys')
   async getAllocatedSurveys(@Req() req:Request) {
     try {

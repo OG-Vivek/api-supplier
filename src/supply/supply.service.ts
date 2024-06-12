@@ -182,6 +182,7 @@ export class SupplyService {
     }
   }
   
+  @CacheKey('Get_Allocated_Surveys') 
   async getAllocatedSurveys(supIdToFind:number) {
     supIdToFind = 116
     try {
@@ -206,7 +207,7 @@ export class SupplyService {
       let projectIds = [];
       let result = response.flatMap(entry => {
         const filteredSurveys = entry.surveys.filter(survey => 
-          Array.isArray(survey.sup) && survey.sup.includes(supIdToFind)
+          survey.st === 1 && Array.isArray(survey.sup) && survey.sup.includes(supIdToFind) && survey["sup" + supIdToFind].st === 1
         );
   
         // Add the project ID to the array if there are matching surveys
@@ -238,7 +239,7 @@ export class SupplyService {
       const projectDataMap = new Map(projectDatas.map(project => [project.id, project]));
 
       //Get supplier details
-      let supplier = await this.getSupplier(supIdToFind)
+      // let supplier = await this.getSupplier(supIdToFind)
       
       //Get the array of survey ids to find corresponding surveys
       let surveyIdsToFind =[]
@@ -316,7 +317,7 @@ export class SupplyService {
       const QutaMapedData = new Map(QuataData.map(item => [item.sur_id, true]));
 
       // Add sur_num_enc to the result
-      const resultWithEnc = result.map(survey =>{
+      const finlanResult = result.map(survey =>{
         const surData = surveyMap.get(survey.sur_id);
         const project:any = projectDataMap.get(survey.projectId);
         return {
@@ -340,7 +341,6 @@ export class SupplyService {
           projectCategory: ProjectCategory[project.ct],
           createdDate:survey.crtd_on,
           modifiedDate:survey.mod_on,
-          SupplierId: supIdToFind,
           isQuota: QutaMapedData.get(survey.sur_id) ? true : false,
           isPIIRequired: surData.pii ? true : false,
           numberOfCompletes: survey["sup"+supIdToFind].cmps ,
@@ -352,8 +352,8 @@ export class SupplyService {
 
       return {
         apiStatus: "success",
-        msg: 'All live groups are successfully searched',
-        result: resultWithEnc 
+        msg: 'All active assigned surveys are successfully searched',
+        result: finlanResult 
       };
     } catch (error) {
       console.error(error);
