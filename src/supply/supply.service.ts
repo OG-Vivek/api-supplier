@@ -19,7 +19,7 @@ export class SupplyService {
     try {
       const languageData = {
         dbName: Database.dbName,
-        collectionName: 'languages',
+        collectionName: CollectionNames.Languages,
         query: {
           filter: {
             name: language,
@@ -42,7 +42,7 @@ export class SupplyService {
 
       const dataForQuestions = {
         dbName: Database.dbName,
-        collectionName: 'qualification',
+        collectionName: CollectionNames.Qualification,
         query: {
           filter: {
             cnt: countryKey,
@@ -87,7 +87,7 @@ export class SupplyService {
     const { id, sUrl, fUrl, qTUrl, oUrl, tUrl, pstbck, pstbck_fail } = data;
     const supplierData = {
       dbName: Database.dbName,
-      collectionName: 'suppliers',
+      collectionName: CollectionNames.Suppliers,
       query: {
         filter: {
           id: id,
@@ -123,7 +123,7 @@ export class SupplyService {
 
     const updateData = {
       dbName: Database.dbName,
-      collectionName: 'suppliers',
+      collectionName: CollectionNames.Suppliers,
       operation: Operation.Update,
       query: { 
           id: id,
@@ -358,7 +358,7 @@ export class SupplyService {
     try {
       const languageData = {
         dbName: Database.dbName,
-        collectionName: 'languages',
+        collectionName: CollectionNames.Languages,
         query: {
           filter: {
             name: language,
@@ -382,7 +382,7 @@ export class SupplyService {
 
       const dataForQuestions = {
         dbName: Database.dbName,
-        collectionName: 'qualification',
+        collectionName: CollectionNames.Qualification,
         query: {
           filter: {
             lang: langCode,
@@ -445,7 +445,7 @@ export class SupplyService {
 
       const data = {
         dbName: Database.dbName,
-        collectionName: 'project_stats',
+        collectionName: CollectionNames.ProjectStats,
         query: {
           filter: {
             'surveys': {
@@ -484,7 +484,7 @@ export class SupplyService {
 
       const updateData = {
         dbName: Database.dbName,
-        collectionName: 'project_stats',
+        collectionName: CollectionNames.ProjectStats,
         operation: Operation.Update,
         query: {
           'surveys.sur_id': surveyId,
